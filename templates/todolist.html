@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List - Three AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .todolist-container {
+            max-width: 600px;
+            margin: 30px auto;
+        }
+
+        .todo-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .todo-input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .todo-input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .todo-input-group button {
+            padding: 12px 25px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .todo-input-group button:hover {
+            background-color: #2563eb;
+        }
+
+        .todo-list {
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s ease;
+        }
+
+        .todo-item:last-child {
+            border-bottom: none;
+        }
+
+        .todo-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .todo-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .todo-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .todo-delete {
+            padding: 8px 12px;
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .todo-delete:hover {
+            background-color: #dc2626;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .todo-input-group {
+                flex-direction: column;
+            }
+
+            .todo-item {
+                flex-wrap: wrap;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✓ To-Do List</h1>
+            <a href="/" class="back-link">← Back to Home</a>
+        </div>
+
+        <div class="todolist-container">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalCount">0</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="completedCount">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+
+            <div class="todo-input-group">
+                <input 
+                    type="text" 
+                    id="todoInput" 
+                    placeholder="Add a new task..." 
+                    onkeypress="handleEnter(event)"
+                >
+                <button onclick="addTodo()">Add</button>
+            </div>
+
+            <div class="todo-list" id="todoList">
+                <div class="empty-state">
+                    <p>No tasks yet!</p>
+                    <p>Add one to get started 📝</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let todos = [];
+
+        function loadTodos() {
+            fetch('/todolist/api/todos')
+                .then(response => response.json())
+                .then(data => {
+                    todos = data || [];
+                    renderTodos();
+                })
+                .catch(error => {
+                    console.error('Error loading todos:', error);
+                    todos = [];
+                    renderTodos();
+                });
+        }
+
+        function addTodo() {
+            const input = document.getElementById('todoInput');
+            const title = input.value.trim();
+
+            if (title === '') {
+                alert('Please enter a task');
+                return;
+            }
+
+            fetch('/todolist/api/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `title=${encodeURIComponent(title)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                todos.push(data);
+                input.value = '';
+                renderTodos();
+            })
+            .catch(error => {
+                console.error('Error adding todo:', error);
+                alert('Error adding task');
+            });
+        }
+
+        function toggleTodo(id) {
+            fetch('/todolist/api/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            })
+            .then(response => response.json())
+            .then(updated => {
+                const index = todos.findIndex(t => t.id === id);
+                if (index !== -1) {
+                    todos[index] = updated;
+                    renderTodos();
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling todo:', error);
+            });
+        }
+
+        function deleteTodo(id) {
+            if (!confirm('Are you sure you want to delete this task?')) {
+                return;
+            }
+
+            fetch('/todolist/api/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            })
+            .then(response => {
+                if (response.ok) {
+                    todos = todos.filter(t => t.id !== id);
+                    renderTodos();
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting todo:', error);
+                alert('Error deleting task');
+            });
+        }
+
+        function renderTodos() {
+            const todoList = document.getElementById('todoList');
+            const totalCount = document.getElementById('totalCount');
+            const completedCount = document.getElementById('completedCount');
+
+            totalCount.textContent = todos.length;
+            completedCount.textContent = todos.filter(t => t.completed).length;
+
+            if (todos.length === 0) {
+                todoList.innerHTML = `
+                    <div class="empty-state">
+                        <p>No tasks yet!</p>
+                        <p>Add one to get started 📝</p>
+                    </div>
+                `;
+                return;
+            }
+
+            todoList.innerHTML = todos.map(todo => `
+                <div class="todo-item ${todo.completed ? 'completed' : ''}">
+                    <input 
+                        type="checkbox" 
+                        class="todo-checkbox"
+                        ${todo.completed ? 'checked' : ''}
+                        onchange="toggleTodo(${todo.id})"
+                    >
+                    <span class="todo-text">${escapeHtml(todo.title)}</span>
+                    <div class="todo-actions">
+                        <button class="todo-delete" onclick="deleteTodo(${todo.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                addTodo();
+            }
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Load todos on page load
+        loadTodos();
+    </script>
+</body>
+</html>

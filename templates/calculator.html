@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator - Three AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .calculator-container {
+            max-width: 400px;
+            margin: 30px auto;
+        }
+
+        .calculator {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 2rem;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: right;
+            margin-bottom: 20px;
+            word-wrap: break-word;
+            word-break: break-all;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .calc-btn {
+            padding: 20px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            background-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .calc-btn:hover {
+            background-color: #d1d5db;
+            transform: scale(1.05);
+        }
+
+        .calc-btn.operator {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .calc-btn.operator:hover {
+            background-color: #2563eb;
+        }
+
+        .calc-btn.equals {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .calc-btn.equals:hover {
+            background-color: #059669;
+        }
+
+        .calc-btn.clear {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .calc-btn.clear:hover {
+            background-color: #dc2626;
+        }
+
+        .calc-btn.zero {
+            grid-column: span 2;
+        }
+
+        .input-group {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧮 Calculator</h1>
+            <a href="/" class="back-link">← Back to Home</a>
+        </div>
+
+        <div class="calculator-container">
+            <div class="calculator">
+                <div class="display" id="display">0</div>
+                <div class="button-grid">
+                    <button class="calc-btn clear" onclick="clearDisplay()">C</button>
+                    <button class="calc-btn clear" onclick="deleteLastChar()">DEL</button>
+                    <button class="calc-btn operator" onclick="addOperator('/')">/</button>
+                    <button class="calc-btn operator" onclick="addOperator('*')">×</button>
+                    
+                    <button class="calc-btn" onclick="addNumber('7')">7</button>
+                    <button class="calc-btn" onclick="addNumber('8')">8</button>
+                    <button class="calc-btn" onclick="addNumber('9')">9</button>
+                    <button class="calc-btn operator" onclick="addOperator('-')">−</button>
+                    
+                    <button class="calc-btn" onclick="addNumber('4')">4</button>
+                    <button class="calc-btn" onclick="addNumber('5')">5</button>
+                    <button class="calc-btn" onclick="addNumber('6')">6</button>
+                    <button class="calc-btn operator" onclick="addOperator('+')">+</button>
+                    
+                    <button class="calc-btn" onclick="addNumber('1')">1</button>
+                    <button class="calc-btn" onclick="addNumber('2')">2</button>
+                    <button class="calc-btn" onclick="addNumber('3')">3</button>
+                    <button class="calc-btn equals" onclick="calculate()">=</button>
+                    
+                    <button class="calc-btn zero" onclick="addNumber('0')">0</button>
+                    <button class="calc-btn" onclick="addNumber('.')">.</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let display = '0';
+        let firstNumber = '';
+        let operation = '';
+        let secondNumber = '';
+        let shouldClearDisplay = false;
+
+        function updateDisplay() {
+            document.getElementById('display').textContent = display;
+        }
+
+        function addNumber(num) {
+            if (shouldClearDisplay) {
+                display = num;
+                shouldClearDisplay = false;
+            } else {
+                if (display === '0' && num !== '.') {
+                    display = num;
+                } else if (num === '.' && display.includes('.')) {
+                    return;
+                } else {
+                    display += num;
+                }
+            }
+            updateDisplay();
+        }
+
+        function addOperator(op) {
+            if (firstNumber === '') {
+                firstNumber = display;
+            } else if (!shouldClearDisplay) {
+                secondNumber = display;
+                performCalculation();
+                firstNumber = display;
+            }
+            operation = op;
+            shouldClearDisplay = true;
+        }
+
+        function performCalculation() {
+            if (firstNumber === '' || operation === '' || secondNumber === '') return;
+
+            fetch('/calculator/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `num1=${encodeURIComponent(firstNumber)}&num2=${encodeURIComponent(secondNumber)}&operation=${encodeURIComponent(operation)}`
+            })
+            .then(response => {
+                if (!response.ok) return response.text().then(msg => { throw new Error(msg); });
+                return response.text();
+            })
+            .then(result => {
+                display = result;
+                updateDisplay();
+            })
+            .catch(error => {
+                display = 'Error';
+                updateDisplay();
+                console.error('Calculation error:', error);
+            });
+        }
+
+        function calculate() {
+            if (firstNumber === '' || operation === '') return;
+            secondNumber = display;
+            performCalculation();
+            firstNumber = '';
+            operation = '';
+            secondNumber = '';
+            shouldClearDisplay = true;
+        }
+
+        function clearDisplay() {
+            display = '0';
+            firstNumber = '';
+            operation = '';
+            secondNumber = '';
+            shouldClearDisplay = false;
+            updateDisplay();
+        }
+
+        function deleteLastChar() {
+            if (display.length > 1) {
+                display = display.slice(0, -1);
+            } else {
+                display = '0';
+            }
+            updateDisplay();
+        }
+    </script>
+</body>
+</html>
