@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Three AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .game-container {
+            max-width: 500px;
+            margin: 30px auto;
+        }
+
+        .game-info {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .game-message {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 25px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell:hover:not(:disabled) {
+            transform: scale(0.95);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .cell:disabled {
+            cursor: not-allowed;
+        }
+
+        .cell-empty {
+            background: #e5e7eb;
+            color: transparent;
+        }
+
+        .cell-x {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .cell-o {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .board {
+                gap: 6px;
+            }
+
+            .cell {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⭕ Tic Tac Toe</h1>
+            <a href="/" class="back-link">← Back to Home</a>
+        </div>
+
+        <div class="game-container">
+            <div class="game-info">
+                <div class="game-message" id="message">Your turn (X)</div>
+            </div>
+
+            <div class="board" id="board">
+                <button class="cell cell-empty" onclick="makeMove(0)"></button>
+                <button class="cell cell-empty" onclick="makeMove(1)"></button>
+                <button class="cell cell-empty" onclick="makeMove(2)"></button>
+                <button class="cell cell-empty" onclick="makeMove(3)"></button>
+                <button class="cell cell-empty" onclick="makeMove(4)"></button>
+                <button class="cell cell-empty" onclick="makeMove(5)"></button>
+                <button class="cell cell-empty" onclick="makeMove(6)"></button>
+                <button class="cell cell-empty" onclick="makeMove(7)"></button>
+                <button class="cell cell-empty" onclick="makeMove(8)"></button>
+            </div>
+
+            <div class="buttons">
+                <button class="btn secondary" onclick="newGame()">New Game</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            board: ['', '', '', '', '', '', '', '', ''],
+            gameOver: false,
+            winner: '',
+            message: 'Your turn (X)'
+        };
+
+        function renderBoard() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, index) => {
+                if (gameState.board[index] === 'X') {
+                    cell.textContent = 'X';
+                    cell.className = 'cell cell-x';
+                } else if (gameState.board[index] === 'O') {
+                    cell.textContent = 'O';
+                    cell.className = 'cell cell-o';
+                } else {
+                    cell.textContent = '';
+                    cell.className = 'cell cell-empty';
+                }
+                cell.disabled = gameState.gameOver || gameState.board[index] !== '';
+            });
+            document.getElementById('message').textContent = gameState.message;
+        }
+
+        function makeMove(index) {
+            if (gameState.gameOver || gameState.board[index] !== '') return;
+
+            gameState.board[index] = 'X';
+
+            fetch('/tictactoe/api/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(gameState)
+            })
+            .then(response => response.json())
+            .then(data => {
+                gameState = data;
+                renderBoard();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                gameState.message = 'Error making move';
+                renderBoard();
+            });
+        }
+
+        function newGame() {
+            fetch('/tictactoe/api/new-game')
+            .then(response => response.json())
+            .then(data => {
+                gameState = data;
+                renderBoard();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        renderBoard();
+    </script>
+</body>
+</html>
